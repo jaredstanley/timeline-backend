@@ -1,10 +1,9 @@
-const { login } = require("../lib/utils");
+const { getTimeline } = require("../lib/db");
 
-module.exports.handler = async function signInUser(event) {
-    const body = JSON.parse(event.body);
+module.exports.handler = async function getTimelineById(event) {
 
-    return login(body)
-        .then(session => ({
+    return getTimeline(event.pathParameters.id)
+        .then(data => ({
             statusCode: 200,
             headers: {
                 "Access-Control-Allow-Headers": "*",
@@ -13,7 +12,7 @@ module.exports.handler = async function signInUser(event) {
                 "Accept": '*/*',
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(session)
+            body: JSON.stringify(data)
         }))
         .catch(err => {
             console.log({ err });
