@@ -1,10 +1,10 @@
-const { login } = require("../lib/utils");
+const { removeUser } = require("../lib/db");
 
-module.exports.handler = async function signInUser(event) {
+module.exports.handler = async function deleteUser(event) {
     const body = JSON.parse(event.body);
 
-    return login(body)
-        .then(session => ({
+    return removeUser(body)
+        .then(response => ({
             statusCode: 200,
             headers: {
                 "Access-Control-Allow-Headers": "*",
@@ -13,14 +13,14 @@ module.exports.handler = async function signInUser(event) {
                 "Accept": '*/*',
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(session)
+            body: JSON.stringify(response)
         }))
         .catch(err => {
             console.log({ err });
-
             return {
                 statusCode: err.statusCode || 500,
-                body: { statusCode: err.statusCode || 500, message: err.message }
+                body: { stack: err.stack, message: err.message }
             };
         });
+
 };

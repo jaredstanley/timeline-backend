@@ -1,68 +1,171 @@
-org: tmaximini
+service: ${file(./secrets.json):ApiName}
 
 custom:
   secrets: ${file(secrets.json)}
-  tableName: "test-users-table"
+  DB_NAME: timelineDB
+  USERNAME: master
+  PASSWORD: password
+  
+  MYSQL:
+    HOST:
+      Fn::GetAtt: [MySqlRDSInstance, Endpoint.Address]
+    PORT:
+      Fn::GetAtt: [MySqlRDSInstance, Endpoint.Port]
+    VPC_CIDR: 10
 
-service: serverless-jwt-authorizer
 provider:
   name: aws
   runtime: nodejs12.x
-  region: eu-central-1
+  role: LambdaRole
+  region: ca-central-1
+  stage: dev
   environment:
     JWT_SECRET: ${self:custom.secrets.JWT_SECRET}
     AWS_ID: ${self:custom.secrets.AWS_ID}
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "dynamodb:GetItem"
-        - "dynamodb:PutItem"
-      Resource: "arn:aws:dynamodb:eu-central-1:${self:custom.secrets.AWS_ID}:table/${self:custom.tableName}"
+    MYSQL_HOST: ${self:custom.MYSQL.HOST}
+    MYSQL_PORT: ${self:custom.MYSQL.PORT}
+    DB_NAME: ${self:custom.DB_NAME}
+    USERNAME: ${self:custom.USERNAME}
+    PASSWORD: ${self:custom.PASSWORD}
 functions:
   verify-token:
     handler: functions/authorize.handler
-
-  me:
-    handler: functions/me.handler
-    events:
-      - http:
-          path: me
-          method: get
-          cors: true
-          authorizer:
-            name: verify-token
-            identitySource: method.request.header.Authorization
-            resultTtlInSeconds: 3600
-  login:
-    handler: functions/login.handler
-    events:
-      - http:
-          path: login
-          method: post
-          cors: true
   register:
     handler: functions/register.handler
     events:
       - http:
           path: register
           method: post
-          cors: true
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+  login:
+    handler: functions/login.handler
+    events:
+      - http:
+          path: login
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+  updateUser:
+    handler: functions/updateUser.handler
+    events:
+      - http:
+          path: updateUser
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+          authorizer:
+            name: verify-token
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 3600
+  createTimeline:
+    handler: functions/createTimeline.handler
+    events:
+      - http:
+          path: timeline/create
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+          authorizer:
+            name: verify-token
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 3600
+  createGroup:
+    handler: functions/createGroup.handler
+    events:
+      - http:
+          path: group/create
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+          authorizer:
+            name: verify-token
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 3600
+  createEvent:
+    handler: functions/createEvent.handler
+    events:
+      - http:
+          path: event/create
+          method: post
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+          authorizer:
+            name: verify-token
+            identitySource: method.request.header.Authorization
+            resultTtlInSeconds: 3600
+  getTimelineById:
+    handler: functions/getTimelineById.handler
+    events:
+      - http:
+          path: timeline/{id}
+          method: get
+          cors:
+            origin: "*"
+            headers:
+              - Content-Type
+              - X-Amz-Date
+              - Authorization
+              - X-Api-Key
+              - X-Amz-Security-Token
+              - X-Amz-User-Agent
+  
 resources:
   Resources:
-    usersTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: ${self:custom.tableName}
-        AttributeDefinitions:
-          - AttributeName: pk
-            AttributeType: S
-          - AttributeName: sk
-            AttributeType: S
-        KeySchema:
-          - AttributeName: pk
-            KeyType: HASH
-          - AttributeName: sk
-            KeyType: RANGE
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+    LambdaRole: ${file(./resource/LambdaRole.yml)}
+    ServerlessInternetGateway: ${file(./resource/ServerlessInternetGateway.yml)}
+    ServerlessVPC: ${file(./resource/ServerlessVPC.yml)}
+    ServerlessVPCGA: ${file(./resource/ServerlessVPCGA.yml)}
+    ServerlessSubnetA: ${file(./resource/ServerlessSubnetA.yml)}
+    ServerlessSubnetB: ${file(./resource/ServerlessSubnetB.yml)}
+    ServerlessSubnetD: ${file(./resource/ServerlessSubnetD.yml)}
+    ServerlessSubnetGroup: ${file(./resource/ServerlessSubnetGroup.yml)}
+    ServerlessSecurityGroup: ${file(./resource/ServerlessSecurityGroup.yml)}
+    RouteTablePublic: ${file(./resource/RouteTablePublic.yml)}
+    RoutePublic: ${file(./resource/RoutePublic.yml)}
+    RouteTableAssociationSubnetA: ${file(./resource/RouteTableAssociationSubnetA.yml)}
+    RouteTableAssociationSubnetB: ${file(./resource/RouteTableAssociationSubnetB.yml)}
+    RouteTableAssociationSubnetD: ${file(./resource/RouteTableAssociationSubnetD.yml)}
+    MySqlRDSInstance: ${file(./resource//MySqlRDSInstance.yml)}
